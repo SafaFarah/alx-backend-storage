@@ -20,11 +20,12 @@ def count_requests(method: Callable) -> Callable:
         """The wrapper function for caching the output.
         """
         r.incr(f'count:{url}')
-        cached_content = r.get(f'cache:{url}')
-        if cached_content:
-            return cached_content.decode('utf-8')
+        result = r.get(f'result:{url}')
+        if result:
+            return result.decode('utf-8')
         result = method(url)
-        r.setex(f'cache:{url}', 10, result)
+        r.set(f'count:{url}', 0)
+        r.setex(f'result:{url}', 10, result)
         return result
     return wrapper
 
