@@ -36,5 +36,6 @@ def get_page(url: str) -> str:
     cached_content = r.get(cache_key)
     if cached_content:
         return cached_content.decode('utf-8')
+    r.set(f'count:{url}', 0)
     r.setex(cache_key, 10, response.text)
     return response.text
