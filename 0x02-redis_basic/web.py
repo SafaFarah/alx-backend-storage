@@ -8,8 +8,6 @@ import requests
 from functools import wraps
 from typing import Callable
 
-r = redis.Redis()
-
 
 def count_requests(method: Callable) -> Callable:
     """
@@ -19,12 +17,12 @@ def count_requests(method: Callable) -> Callable:
     def wrapper(url: str) -> str:
         """The wrapper function for caching the output.
         """
+        r = redis.Redis()
         r.incr(f'count:{url}')
         result = r.get(f'result:{url}')
         if result:
             return result.decode('utf-8')
         result = method(url)
-        r.set(f'count:{url}', 0)
         r.setex(f'result:{url}', 10, result)
         return result
     return wrapper
