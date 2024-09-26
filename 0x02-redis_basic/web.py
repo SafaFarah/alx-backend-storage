@@ -1,40 +1,36 @@
 #!/usr/bin/env python3
 """
-A module to fetch a webpage and cache its content using Redis.
+Caching request module
 """
-
 import redis
 import requests
 from functools import wraps
 from typing import Callable
 
 
-def count_requests(method: Callable) -> Callable:
+def track_get_page(fn: Callable) -> Callable:
+    """ Decorator for get_page
     """
-    A decorator to count how many times a particular URL is accessed.
-    """
-    @wraps(method)
+    @wraps(fn)
     def wrapper(url: str) -> str:
-        """The wrapper function for caching the output.
+        """ Wrapper that:
+            - check whether a url's data is cached
+            - tracks how many times get_page is called
         """
-        r = redis.Redis()
-        r.incr(f'count:{url}')
-        cached_page = r.get(f'{url}')
+        client = redis.Redis()
+        client.incr(f'count:{url}')
+        cached_page = client.get(f'{url}')
         if cached_page:
             return cached_page.decode('utf-8')
-        response = method(url)
-        r.set(f'{url}', response, 10)
+        response = fn(url)
+        client.set(f'{url}', response, 10)
         return response
     return wrapper
 
 
-@count_requests
+@track_get_page
 def get_page(url: str) -> str:
+    """ Makes a http request to a given endpoint
     """
-    Get content of a URL, caches it, and sets an expiration time of 10 seconds.
-    Args:
-        url (str): The URL to fetch the HTML content from.
-    Returns:
-        str: The HTML content of the page.
-    """
-    return requests.get(url).text
+    response = requests.get(url)
+    return response.text
