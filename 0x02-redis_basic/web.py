@@ -18,8 +18,7 @@ def count_requests(method: Callable) -> Callable:
     @wraps(method)
     def wrapper(url: str) -> str:
         cache_key = f"count:{url}"
-        count = r.incr(cache_key)
-        print(f"URL {url} accessed {count} times.")
+        r.incr(cache_key)
         return method(url)
     return wrapper
 
@@ -36,9 +35,6 @@ def get_page(url: str) -> str:
     cache_key = f"cache:{url}"
     cached_content = r.get(cache_key)
     if cached_content:
-        print(f"Cache hit for {url}")
         return cached_content.decode('utf-8')
-    print(f"Cache miss for {url}, fetching from the web...")
-    response = requests.get(url)
     r.setex(cache_key, 10, response.text)
     return response.text
