@@ -19,12 +19,12 @@ def count_requests(method: Callable) -> Callable:
         """
         r = redis.Redis()
         r.incr(f'count:{url}')
-        result = r.get(f'result:{url}')
-        if result:
-            return result.decode('utf-8')
-        result = method(url)
-        r.setex(f'result:{url}', 10, result)
-        return result
+        cached_page = r.get(f'{url}')
+        if cached_page:
+            return cached_page.decode('utf-8')
+        response = method(url)
+        r.set(f'{url}', response, 10)
+        return response
     return wrapper
 
 
