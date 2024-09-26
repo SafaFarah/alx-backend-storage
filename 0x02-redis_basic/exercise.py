@@ -5,7 +5,48 @@ This module contains a Cache class to interact with Redis.
 
 import redis
 import uuid
-from typing import Union, Callable, Optional
+from typing import Union, Callable, Optional, Any
+import functools
+
+
+def count_calls(method: Callable) -> Callable:
+    """
+    A decorator that counts the number of times a method is called.
+    Args:
+        method (Callable): The method to be decorated.
+    Returns:
+        Callable: The wrapped method with a call counter.
+    """
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs) -> Any:
+        """
+        Wrapper function that increments count each time the method is called.
+        """
+        key = method.__qualname__
+        self._redis.incr(key)
+        return method(self, *args, **kwargs)
+    return wrapper
+
+
+def call_history(method: Callable) -> Callable:
+    """
+    Decorator to store the input and output history of a method.
+    Args:
+        method (Callable): The method to decorate.
+    Returns:
+        Callable: The decorated method with call history tracking.
+    """
+
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs) -> Any:
+        """ Generate keys for inputs and outputs"""
+        input_key = f"{method.__qualname__}:inputs"
+        output_key = f"{method.__qualname__}:outputs"
+        self._redis.rpush(input_key, str(args))
+        output = method(self, *args, **kwargs)
+        self._redis.rpush(output_key, output)
+        return output
+    return wrapper
 
 
 class Cache:
@@ -15,6 +56,8 @@ class Cache:
         self._redis = redis.Redis()
         self._redis.flushdb()
 
+    @call_history
+    @count_calls
     def store(self, data: Union[str, bytes, int, float]) -> str:
         """
         Store data in Redis and return the generated key.
