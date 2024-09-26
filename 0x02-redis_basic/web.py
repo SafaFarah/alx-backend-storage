@@ -17,8 +17,14 @@ def count_requests(method: Callable) -> Callable:
     """
     @wraps(method)
     def wrapper(url: str) -> str:
-        cache_key = f"count:{url}"
-        r.incr(cache_key)
+        """The wrapper function for caching the output.
+        """
+        r.incr(f'count:{url}')
+        cached_content = r.get(f'cache:{url}')
+        if cached_content:
+            return cached_content.decode('utf-8')
+        r.set(f'count:{url}', 0)
+        r.setex(f'result:{url}', 10, result)
         return method(url)
     return wrapper
 
@@ -32,10 +38,4 @@ def get_page(url: str) -> str:
     Returns:
         str: The HTML content of the page.
     """
-    cache_key = f"cache:{url}"
-    cached_content = r.get(cache_key)
-    if cached_content:
-        return cached_content.decode('utf-8')
-    r.set(f'count:{url}', 0)
-    r.setex(cache_key, 10, response.text)
-    return response.text
+    return requests.get(url).text
